@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -28,11 +29,22 @@ class _HomePageState extends State<HomePage> {
         ),
         backgroundColor: Colors.red,
       ),
-      body: _tasksList(),
+      body: _taskView(),
       floatingActionButton: _addTaskButton(),
     );
   }
-
+  Widget _taskView() {
+    return FutureBuilder(
+      future: Hive.openBox('tasks'), 
+      builder: (BuildContext context, AsyncSnapshot _snapshot) {
+      if (_snapshot.connectionState == ConnectionState.done) {
+        return _tasksList();
+      } else {
+        return const Center(child: CircularProgressIndicator());
+      }
+    },
+    );
+  }
   Widget _tasksList() {
     return ListView(
       children: [
