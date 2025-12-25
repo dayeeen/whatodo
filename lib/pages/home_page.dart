@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import 'package:taskly/models/task.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,6 +14,8 @@ class _HomePageState extends State<HomePage> {
   late double _deviceHeight, _deviceWidth;
   
   String? _newTaskContent;
+
+  Box? _box;
 
   _HomePageState();
   
@@ -37,7 +40,8 @@ class _HomePageState extends State<HomePage> {
     return FutureBuilder(
       future: Hive.openBox('tasks'), 
       builder: (BuildContext context, AsyncSnapshot _snapshot) {
-      if (_snapshot.connectionState == ConnectionState.done) {
+      if (_snapshot.hasData) {
+        _box = _snapshot.data;
         return _tasksList();
       } else {
         return const Center(child: CircularProgressIndicator());
@@ -46,41 +50,35 @@ class _HomePageState extends State<HomePage> {
     );
   }
   Widget _tasksList() {
-    return ListView(
-      children: [
-        ListTile(
-          title: Text('Do Laundry'),
-          subtitle: Text(DateTime.now().toString()),
-          trailing: Icon(Icons.check_box_outlined, color: Colors.red),
-
-        ),
-        ListTile(
-          title: Text('Do Laundry'),
-          subtitle: Text(DateTime.now().toString()),
-          trailing: Icon(Icons.check_box_outlined, color: Colors.red),
-
-        ),
-        ListTile(
-          title: Text('Do Laundry'),
-          subtitle: Text(DateTime.now().toString()),
-          trailing: Icon(Icons.check_box_outlined, color: Colors.red),
-
-        ),
-        ListTile(
-          title: Text('Do Laundry'),
-          subtitle: Text(DateTime.now().toString()),
-          trailing: Icon(Icons.check_box_outlined, color: Colors.red),
-
-        ),
-        ListTile(
-          title: Text('Do Laundry'),
-          subtitle: Text(DateTime.now().toString()),
-          trailing: Icon(Icons.check_box_outlined, color: Colors.red),
-
-        ),
-       
-      ],
+    List tasks = _box?.values.toList() ?? [];
+    return ListView.builder(
+      itemBuilder: (BuildContext context, int index){
+        var task = Task.fromMap(Map<String, dynamic>.from(tasks[index]));
+        return ListTile(
+          title: Text (
+            task.content,
+            style: TextStyle(
+              fontSize: 20,
+              decoration: task.done ? TextDecoration.lineThrough : TextDecoration.none,
+            ),
+          ),
+          subtitle: Text(task.timestamp.toString()),
+          trailing: Icon(
+            task.done ? Icons.check_box : Icons.check_box_outline_blank, color: Colors.red),
+          onTap: () {
+            task.done = !task.done;
+            _box?.putAt(index, task.toMap());
+            setState(() {});
+          },
+          onLongPress: () {
+            _box?.deleteAt(index);
+            setState(() {});
+          },
+        );
+      }, 
+      itemCount: tasks.length
     );
+    
   }
   Widget _addTaskButton() {
     return FloatingActionButton(
@@ -97,7 +95,20 @@ class _HomePageState extends State<HomePage> {
       return AlertDialog(
         title: const Text('Add New Task'),
         content: TextField(
-          onSubmitted: (_value) => {},
+          onSubmitted: (_value) {
+            if (_newTaskContent != null) {
+              var newTask = Task(
+                content: _newTaskContent!,
+                timestamp: DateTime.now(),
+                done: false,
+              );
+              _box?.add(newTask.toMap());
+              setState(() {
+                _newTaskContent = null;
+              });
+              Navigator.of(_context).pop();
+            }
+          },
           onChanged:(_value) => {
             setState(() {
               _newTaskContent = _value;
